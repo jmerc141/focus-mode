@@ -95,21 +95,22 @@ class ShapedFrame(wx.Frame):
     def global_click(self, x, y, z, a):
         if not a:
             # Mouse click release (sets top window) and clicked a different window
-            fore = win32gui.GetForegroundWindow()
-            if fore not in self.top:
-                if len(self.top) > self.keep_highlighted:
-                    self.top.pop(0)
-                self.top.append(fore)
-                
-                if self.top[-1] == 132814:  # Clicked desktop
-                    self.top.clear()
-                    self.fade_out()
-                else:
-                    self.t = threading.Thread(target=self.switch)
-                    if not self.t.is_alive():
-                        win32gui.SetWindowPos(self.hwnd, self.top[-self.keep_highlighted], 0,0,0,0,
-                                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
-                        self.t.start()
+            if self.keep_highlighted != -1:
+                fore = win32gui.GetForegroundWindow()
+                if fore not in self.top:
+                    if len(self.top) > self.keep_highlighted:
+                        self.top.pop(0)
+                    self.top.append(fore)
+                    print(self.top[-1])
+                    if self.top[-1] == 132814:  # Clicked desktop
+                        self.top.clear()
+                        self.fade_out()
+                    else:
+                        self.t = threading.Thread(target=self.switch)
+                        if not self.t.is_alive():
+                            win32gui.SetWindowPos(self.hwnd, self.top[-self.keep_highlighted], 0,0,0,0,
+                                            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+                            self.t.start()
             #print(self.top)
 
     def quit(self):
@@ -118,7 +119,10 @@ class ShapedFrame(wx.Frame):
 
 
     def set_highlight_num(self, x, y):
-        self.keep_highlighted = int(y.text)
+        if y.text == 'None':
+            self.keep_highlighted = -1
+        else:
+            self.keep_highlighted = int(y.text)
         
 
 def quit(tray):
@@ -156,6 +160,7 @@ if __name__ == '__main__':
             pystray.MenuItem('2', sf.set_highlight_num, radio=True),
             pystray.MenuItem('3', sf.set_highlight_num, radio=True),
             pystray.MenuItem('4', sf.set_highlight_num, radio=True),
+            pystray.MenuItem('None', sf.set_highlight_num, radio=True),
             )),
         pystray.MenuItem('Quit', quit)
         )).run_detached()
