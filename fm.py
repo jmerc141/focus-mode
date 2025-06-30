@@ -19,8 +19,11 @@ class ShapedFrame(wx.Frame):
         self.fade_time = 0.003          # Seconds for fade in/out transition
         self.faded = False              # Is faded out
 
-        self.window_num_select = {1: True, 2: False, 3: False, 4: False, -1: False}
-        self.opacity_select = {10: False, 25: False, 50: True, 75: False, 90: False}
+        self.window_num_select = {0: True, 1: False, 2: False, 3: False, -1: False}
+        self.opacity_select = {'10%': False, '15%': False, '20%': False, '25%': False, '30%': False, 
+                               '35%': False, '40%': False, '45%': False, '50%': True, '55%': False,
+                               '60%': False, '65%': False, '70%': False, '75%': False, '80%': False,
+                               '85%': False, '90%': False, '95%': False,}
 
         # Make window clicks go through and not appear in taskbar
         self.hwnd = self.GetHandle()
@@ -60,22 +63,13 @@ class ShapedFrame(wx.Frame):
         self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
 
-    def OnEraseBackground(self,evt=None):
+    def OnEraseBackground(self, evt=None):
         pass
 
 
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
         dc.DrawBitmap(self.bmp, 0,0, True)
-    
-
-    def get_name(self, w):
-        length = ctypes.windll.user32.GetWindowTextLengthW(w)
-        if length == 0:
-            return ""
-        buffer = ctypes.create_unicode_buffer(length + 1)
-        ctypes.windll.user32.GetWindowTextW(w, buffer, length + 1)
-        return buffer.value
     
 
     def fade_out(self):
@@ -99,13 +93,19 @@ class ShapedFrame(wx.Frame):
         self.fade_in()
 
 
+    def enumHandler(self, hwnd, ctx):
+        if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd) != '':
+            self.top.append(hwnd)
+
+
     def global_click(self, x, y, z, a):
         if not a:
             # Mouse click release (sets top window) and clicked a different window
             fore = win32gui.GetForegroundWindow()           # Get top window
+            win32gui.EnumWindows(self.enumHandler, None)    # Fill self.top with PIDs of open windows
             
             if self.keep_highlighted != -1:         # If number is selected
-                
+                '''
                 if fore not in self.top:
                     self.top.append(fore)
                     if len(self.top) > self.keep_highlighted:
@@ -113,12 +113,12 @@ class ShapedFrame(wx.Frame):
                 else:
                     self.top.remove(fore)
                     self.top.append(fore)
-                
-                win32gui.SetWindowPos(self.hwnd, self.top[-self.keep_highlighted], 0,0,0,0,
+                '''
+                win32gui.SetWindowPos(self.hwnd, self.top[self.keep_highlighted], 0,0,0,0,
                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
                 
             if win32gui.GetWindowText(fore) == 'Program Manager':  # Clicked desktop
-                self.top = [0] * (self.keep_highlighted - 1)
+                #self.top = [0] * (self.keep_highlighted - 1)
                 self.t = threading.Thread(target=self.fade_out)
                 if not self.t.is_alive():
                         self.t.start()
@@ -129,18 +129,18 @@ class ShapedFrame(wx.Frame):
                 if not self.t.is_alive():
                         self.t.start()
             
-            #print(self.top)
+            #print(self.top, self.keep_highlighted, self.top[self.keep_highlighted], win32gui.GetWindowText(self.top[self.keep_highlighted]))
+            self.top = []
 
 
     def set_highlight_num(self, x, y):
         for k in self.window_num_select:
             self.window_num_select[k] = False
+
         if y.text == 'None':
             self.keep_highlighted = -1
-            self.top.clear()
         else:
-            self.keep_highlighted = int(y.text)
-            self.top = [0] * (int(y.text) - 1)
+            self.keep_highlighted = int(y.text) - 1
             win32gui.SetWindowPos(self.hwnd, win32gui.GetForegroundWindow(), 0,0,0,0,
                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
         self.window_num_select[self.keep_highlighted] = True
@@ -149,9 +149,9 @@ class ShapedFrame(wx.Frame):
     def set_opacity(self, obj, op):
         for k in self.opacity_select:
             self.opacity_select[k] = False
-        num = int(op.text[:-1])
-        self.opacity_select[num] = True
         
+        num = int(op.text[:-1])
+        self.opacity_select[op.text] = True
         self.fade_out()
         self.opacity = int((num / 100) * 255)
         time.sleep(self.cooldown)
@@ -160,6 +160,7 @@ class ShapedFrame(wx.Frame):
         
 
 def quit(tray):
+    sf.fade_out()
     sf.Close()
     tray.stop()
     
@@ -188,20 +189,21 @@ if __name__ == '__main__':
     l.start()
 
     ico = Image.open('eye.png')
+
+    opacity_menu = []
+    for i in sf.opacity_select:
+        opacity_menu.append(pystray.MenuItem(i, sf.set_opacity, radio=True, checked=lambda item, key=i: sf.opacity_select[key]))
+
     pystray.Icon('FocusMode', icon=ico, menu=pystray.Menu(
         pystray.MenuItem('Opacity', pystray.Menu(
-            pystray.MenuItem('10%', sf.set_opacity, radio=True, checked=lambda item: sf.opacity_select[10]),
-            pystray.MenuItem('25%', sf.set_opacity, radio=True, checked=lambda item: sf.opacity_select[25]),
-            pystray.MenuItem('50%', sf.set_opacity, radio=True, checked=lambda item: sf.opacity_select[50]),
-            pystray.MenuItem('75%', sf.set_opacity, radio=True, checked=lambda item: sf.opacity_select[75]),
-            pystray.MenuItem('90%', sf.set_opacity, radio=True, checked=lambda item: sf.opacity_select[90]),
+            *opacity_menu
         )),
         pystray.MenuItem('# of windows', pystray.Menu(
-            pystray.MenuItem('1', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[1]),
-            pystray.MenuItem('2', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[2]),
-            pystray.MenuItem('3', sf.set_highlight_num, radio=True, checked=lambda: sf.window_num[2]),
-            pystray.MenuItem('4', sf.set_highlight_num, radio=True, checked=lambda: sf.window_num[3]),
-            pystray.MenuItem('None', sf.set_highlight_num, radio=True, checked=lambda: sf.window_num[4]),
+            pystray.MenuItem('1', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[0]),
+            pystray.MenuItem('2', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[1]),
+            pystray.MenuItem('3', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[2]),
+            pystray.MenuItem('4', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[3]),
+            pystray.MenuItem('None', sf.set_highlight_num, radio=True, checked=lambda item: sf.window_num_select[-1]),
         )),
         pystray.MenuItem('Quit', quit)
         )).run_detached()
