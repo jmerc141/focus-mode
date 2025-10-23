@@ -1,6 +1,6 @@
 '''
     icon from: https://www.flaticon.com/free-icons/eye-tracking
-
+    pyinstaller -F -w -i res\eye.png --add-data res\eye.png:res --clean fm.py
 '''
 
 import wx, ctypes, win32con, win32gui, screeninfo, time, pynput, threading, \
@@ -210,3 +210,4 @@ if __name__ == '__main__':
     
     
     
+
