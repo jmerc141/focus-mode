@@ -1,0 +1,6 @@
+pillow
+wxpython
+pywin32
+screeninfo
+pynput
+pystray
