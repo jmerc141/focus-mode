@@ -1,10 +1,10 @@
 '''
-    TODO make a background frame, then a second frame that fades in when clicking a new window
     icon from: https://www.flaticon.com/free-icons/eye-tracking
+
 '''
 
-import wx, ctypes, win32con, win32gui, sys, screeninfo, time, pynput, threading, \
-pystray
+import wx, ctypes, win32con, win32gui, screeninfo, time, pynput, threading, \
+pystray, sys, os
 from PIL import Image
 
 
@@ -94,7 +94,9 @@ class ShapedFrame(wx.Frame):
 
 
     def enumHandler(self, hwnd, ctx):
-        if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd) != '':
+        if win32gui.IsWindowVisible(hwnd) and \
+        win32gui.GetWindowText(hwnd) != '' \
+        and win32gui.GetWindowText(hwnd) != 'Focus Mode':
             self.top.append(hwnd)
 
 
@@ -105,20 +107,10 @@ class ShapedFrame(wx.Frame):
             win32gui.EnumWindows(self.enumHandler, None)    # Fill self.top with PIDs of open windows
             
             if self.keep_highlighted != -1:         # If number is selected
-                '''
-                if fore not in self.top:
-                    self.top.append(fore)
-                    if len(self.top) > self.keep_highlighted:
-                        self.top.pop(0)
-                else:
-                    self.top.remove(fore)
-                    self.top.append(fore)
-                '''
                 win32gui.SetWindowPos(self.hwnd, self.top[self.keep_highlighted], 0,0,0,0,
                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
                 
             if win32gui.GetWindowText(fore) == 'Program Manager':  # Clicked desktop
-                #self.top = [0] * (self.keep_highlighted - 1)
                 self.t = threading.Thread(target=self.fade_out)
                 if not self.t.is_alive():
                         self.t.start()
@@ -129,7 +121,8 @@ class ShapedFrame(wx.Frame):
                 if not self.t.is_alive():
                         self.t.start()
             
-            #print(self.top, self.keep_highlighted, self.top[self.keep_highlighted], win32gui.GetWindowText(self.top[self.keep_highlighted]))
+            # Check window order
+            print([win32gui.GetWindowText(t) for t in self.top])
             self.top = []
 
 
@@ -168,6 +161,9 @@ def quit(tray):
 if __name__ == '__main__':
     app = wx.App()
 
+    if hasattr(sys, '_MEIPASS'):
+        os.chdir(sys._MEIPASS)
+
     leastx = 0
     leasty = 0
 
@@ -188,7 +184,7 @@ if __name__ == '__main__':
     l = pynput.mouse.Listener(on_click=sf.global_click)
     l.start()
 
-    ico = Image.open('eye.png')
+    ico = Image.open('res/eye.png')
 
     opacity_menu = []
     for i in sf.opacity_select:
