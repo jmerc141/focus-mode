@@ -1,4 +1,4 @@
-'''
+r'''
     icon from: https://www.flaticon.com/free-icons/eye-tracking
     pyinstaller -F -w -i res\eye.png --add-data res\eye.png:res --clean fm.py
 '''
@@ -62,6 +62,8 @@ class ShapedFrame(wx.Frame):
         #self.Bind(wx.EVT_WINDOW_CREATE, self.SetWindowShape)
         self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
+        self.exclusions = ['Focus Mode', 'PopupHost', 'System tray overflow window.']
+
 
     def OnEraseBackground(self, evt=None):
         pass
@@ -94,11 +96,12 @@ class ShapedFrame(wx.Frame):
 
 
     def enumHandler(self, hwnd, ctx):
-        if win32gui.IsWindowVisible(hwnd) and \
-        win32gui.GetWindowText(hwnd) != '' \
-        and win32gui.GetWindowText(hwnd) != 'Focus Mode':
+        # Add exclusions here
+        wndText = win32gui.GetWindowText(hwnd)
+        if win32gui.IsWindowVisible(hwnd) and wndText != '' and wndText not in self.exclusions:
+            print(win32gui.GetWindowText(hwnd))
             self.top.append(hwnd)
-
+        
 
     def global_click(self, x, y, z, a):
         if not a:
@@ -120,9 +123,10 @@ class ShapedFrame(wx.Frame):
                 self.t = threading.Thread(target=self.fade_in)
                 if not self.t.is_alive():
                         self.t.start()
-            
+
             # Check window order
-            print([win32gui.GetWindowText(t) for t in self.top])
+            #print([win32gui.GetWindowText(t) for t in self.top])
+            print()
             self.top = []
 
 
